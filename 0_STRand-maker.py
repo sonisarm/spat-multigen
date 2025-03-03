@@ -1,9 +1,9 @@
-# Título: Código python para crear formato STRand
-# Autor: Sonia Sarmiento
-# Fecha: Febrero 2025
+# Title: Python code to create STRand format
+# Author: Sonia Sarmiento
+# Date: February 2025
 
-# input: xlsx con una columna por alelo, y otras columnas adicionales (posibles: ID, pop, X, Y)
-# output: xlsx con formato STRand
+# input: xlsx with one column per allele, and metadata (Ind, Pop, X, Y)
+# output: xlsx with STRand formatting
 
 import os
 import pandas as pd
