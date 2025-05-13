@@ -1,0 +1,124 @@
+---
+title: "Rscript TESS"
+output: TESS cross-validation and structure map
+date: "2025-05-13"
+author: Sonia Sarmiento
+---
+
+```{r setup, include=FALSE}
+# libraries
+library(adegenet)
+library(polysat)
+library(poppr)
+library(readxl)
+library(dplyr)
+library(sp)
+library(ggplot2)
+#devtools::install_github("bcm-uga/TESS3_encho_sen")
+library(tess3r)
+library(maps)
+library(rworldmap)
+```
+
+
+
+# Load data from the species 
+Format: STRand (see STRand maker code in GitHub)
+
+```{r}
+# Genetic data
+Genambig <- read.STRand(df, sep = ";", popInSam = FALSE)
+
+pl <- 2 #ploidy of the species
+sp <- 'SpeciesName'
+usatnt <- c(5, 6, 6, 4, 5, 4, 4, 5, 5, 6) # change to your species and number of loci
+
+```
+
+Create Structure file from Genambig:
+```{r Create input}
+all_samples <- Samples(Genambig)
+Usatnts(Genambig) <- usatnt
+Ploidies(Genambig) <- pl
+
+Stru <- gendata.to.genind(Genambig, samples = Samples(Genambig), loci = Loci(Genambig))
+strata(Stru) <- data.frame(pop = pop(Stru))
+
+```
+
+
+
+#  Analysis: TESS3
+
+Load dataframe with coordinates
+```{r Get coords}
+Coordf <- read_excel("Coordfile", sheet = "Coords") 
+Coordf$X <- as.numeric(as.character(Coordf$X))
+Coordf$Y <- as.numeric(as.character(Coordf$Y))
+indNames(Stru) %in% Coordf$Code_analysis # should be true
+inds <- indNames(Stru)
+
+tmp <- Coordf %>% dplyr::filter(Code_analysis %in% inds, !is.na(X), !is.na(Y)) 
+coord <- as.matrix(tmp %>% dplyr::select(X,Y))
+
+```
+
+
+Optional: convert UTM to long/lat
+```{r}
+library(sp)
+utm <- SpatialPoints(coords = coord, proj4string = CRS("+proj=utm +zone=28 +datum=WGS84"))
+longlat <- spTransform(utm, CRS("+proj=longlat +datum=WGS84"))
+coordll <- coordinates(longlat)
+
+
+```
+
+
+Create tess object
+```{r}
+genotypes <- Stru@tab
+genotypes <- Stru@tab[rownames(Stru@tab) %in% tmp$Code_analysis, ]
+
+
+obj <- tess3(X = genotypes, coord = coordll,
+             K = 1:20, ploidy = 4, openMP.core.num = 4)
+
+
+plot(obj, pch = 19, col = "black",
+     xlab = "Number of ancestral populations",
+     ylab = "Cross-Validation score")
+
+```
+
+
+Run TESS3:
+```{r}
+Q.matrix <- qmatrix(obj, K = 2)
+
+my.colors <- c( "lightblue", "orange")
+my.palette <- CreatePalette(my.colors, 9)
+
+barplot(Q.matrix, sort.by.Q = FALSE, 
+        border = NA, space = 0,
+        col.palette = my.palette,
+        xlab = "Individuals", ylab = "Ancestry coefficients") -> bp
+axis(1, at = 1:nrow(Q.matrix), labels = tmp$Code_analysis, las = 3, cex.axis = .4) 
+
+```
+
+
+Plot map
+```{r Plot map}
+nrow(Q.matrix) == nrow(coordll)
+
+plot(Q.matrix, coordll, method = "map.max", cex = .5,  
+     interpol = FieldsKrigModel(10), 
+     main = "Ancestry coefficients",
+     resolution = c(300, 300),
+     col.palette = my.palette,
+     xlab = "Longitude", ylab = "Latitude")
+
+```
+
+

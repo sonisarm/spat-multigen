@@ -1,0 +1,94 @@
+---
+title: "Rscript DAPC"
+output: DAPC scatter plot and table
+date: "2025-05-13"
+author: Sonia Sarmiento
+---
+
+```{r setup, include=FALSE}
+library(adegenet)       # find.clusters, dapc, scatter.dapc, table.value
+library(polysat)        # read.STRand, Samples, Loci, Usatnts, Ploidies
+library(poppr)          # gendata.to.genind
+library(ggplot2)   
+
+```
+
+
+
+# Load data from the species 
+Format: STRand (see STRand maker code in GitHub)
+
+```{r}
+# Genetic data
+Genambig <- read.STRand(df, sep = ";", popInSam = FALSE)
+
+pl <- 2 #ploidy of the species
+sp <- 'SpeciesName'
+usatnt <- c(5, 6, 6, 4, 5, 4, 4, 5, 5, 6) # change to your species and number of loci
+
+```
+
+Create Structure file from Genambig:
+```{r Create input}
+all_samples <- Samples(Genambig)
+Usatnts(Genambig) <- usatnt
+Ploidies(Genambig) <- pl
+
+Stru <- gendata.to.genind(Genambig, samples = Samples(Genambig), loci = Loci(Genambig))
+strata(Stru) <- data.frame(pop = pop(Stru))
+
+```
+
+
+# Analysis: DAPC
+
+
+1) Find clusters
+```{r}
+nclust1 <- find.clusters(Stru,  max.n.clust = 50)
+names(nclust1)
+head(nclust1$grp, 100)
+
+# original groups inferred as clusters: 
+table(pop(Stru), nclust1$grp)
+
+table.value(table(pop(Stru), nclust1$grp), col.lab=paste("inferred", 1:50),
+            row.lab=unique(Stru@pop))
+
+```
+
+2) How many clusters are useful to describe the data?
+```{r}
+dapc1 <- dapc(Stru, nclust1$grp)
+dapc1
+
+grp <- nclust1$grp
+
+
+```
+
+3) Plot
+
+```{r} 
+#mycol = c('blue3', "red3") # modify colors if needed
+#scatter.dapc(dapc1, col=mycol, cstar = 0, posi.pca ="bottomleft")
+scatter.dapc(dapc1, scree.da=TRUE)
+```
+
+```{r Save plots}
+
+# save table
+png(paste0("outputtable.png"), width = 800, height = 600)
+table.value(table(pop(Stru), nclust1$grp), col.lab=paste("inferred", 1:10),
+            row.lab=unique(Stru@pop))
+dev.off()
+
+# save scatter plot
+png(paste0("outputfile.png"), width = 800, height = 600)
+scatter.dapc(dapc1)
+dev.off()
+
+
+```
+
+
