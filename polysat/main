@@ -1,0 +1,4 @@
+# Polyploidy analysis
+To further clarify whether deviations from disomic expectations were due to allopolyploidy, we used the testAlGroups function in the polysat package v1.7.7 (Clark and Jasieniuk 2011) in R to assign alleles to isoloci. 
+This method first uses alleleCorrelations to cluster alleles based on pairwise p-values from Fisher’s exact test (via K-means followed by UPGMA), forming initial isolocus groupings. 
+testAlGroups then evaluates these groupings against individual genotypes, refining assignments within a tolerance threshold of 0.01.
